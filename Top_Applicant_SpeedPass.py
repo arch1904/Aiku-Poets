@@ -12,8 +12,6 @@ import openai
 with open('OPEN_AI_KEY.txt') as f:
     lines = f.readlines()
 openai.api_key = lines[0]
-model_engine = "text-davinci-003"
-max_tokens = 3072
 
 def get_resume_text(resume_file):
     PDF_file = Path(resume_file)
@@ -60,6 +58,44 @@ def make_prompt(resumes, question):
     res_text_compiled = parse_all_resumes(resumes)
     prompt = "Given all those resumes marked with ----Begin Candidate: and End Candidate----\n assess" + question
     return prompt
+
+
+def summarize_resume(text_resume):
+    model_engine_summary = "text-davinci-003"
+    max_tokens = 1024
+    prompt = "Summarize the following Text Resume: " + text_resume
+    completion = openai.Completion.create(
+        engine=model_engine_summary,
+        prompt=prompt,
+        max_tokens=max_tokens,
+        temperature=0.5,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+    return completion.choices[0].text
+
+def assess_single_resume(text_resume, question_completion):
+    """
+    Questions in the form of {Is this candidate a good fit for} user-input(for ex: a Marketing Manager Role? ***, given certain criteria*** optional)
+    """
+    model_engine_assessment = "gpt-3.5-turbo"
+    summary = summarize_resume(text_resume)
+
+    response = openai.ChatCompletion.create(
+    model = model_engine_assessment,
+    messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Consider the following text-resume from a Candidate: " + summary},
+            {"role": "user", "content": "Is this candidate a good fit for " + question_completion}
+        ]
+    )
+    return response['choices'][0]['message']['content']
+
+
+
+
+
 
 prompt = make_prompt(resumes, question)
 completion = openai.Completion.create(
