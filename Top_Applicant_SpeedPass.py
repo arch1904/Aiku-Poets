@@ -168,6 +168,9 @@ def assess_multiple_resumes(text_resumes ,question_completion):
     return response['choices'][0]['message']['content']
 
 if __name__ == "__main__":
+    """
+    python3 Top_Applicant_SpeedPass.py [filename1].pdf [filename2].pdf ... [filename n].pdf [question/criteria]
+    """
     resumes = sys.argv[1:len(sys.argv)-1]
     question = sys.argv[len(sys.argv) - 1]
 
