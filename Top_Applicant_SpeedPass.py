@@ -1,4 +1,3 @@
-import platform
 from tempfile import TemporaryDirectory
 from pathlib import Path
  
@@ -8,7 +7,6 @@ from PIL import Image
 
 import sys
 import concurrent.futures
-import threading
 
 import openai
 
@@ -45,8 +43,6 @@ def get_resume_text(resume_file):
         resume_text += text
     return resume_text
 
-# resumes = sys.argv[1:len(sys.argv)-1]
-# question = sys.argv[len(sys.argv) - 1]
 def parse_all_resumes(resumes):
     res_text_compiled = []
     for i in range(len(resumes)):
@@ -58,12 +54,6 @@ def parse_all_resumes(resumes):
         # res_text_compiled += curr
         res_text_compiled.append(curr)
     return res_text_compiled
-
-def make_prompt(resumes, question):
-    res_text_compiled = parse_all_resumes(resumes)
-    prompt = "Given all those resumes marked with ----Begin Candidate: and End Candidate----\n assess" + question
-    return prompt
-
 
 def summarize_resume(text_resume):
     model_engine_summary = "text-davinci-003"
@@ -79,6 +69,22 @@ def summarize_resume(text_resume):
         presence_penalty=0
     )
     return completion.choices[0].text
+
+def get_resume_summaries(textresumes):
+    """
+    Multi-threaded calls to davinci model to parallelize summarization of resumes
+
+    textresumes: list [] - containing text-resumes converted from pdfs per element
+    """
+    summaries = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        iterator = {executor.submit(summarize_resume, textresume): textresume for textresume in textresumes}
+        for i in concurrent.futures.as_completed(iterator):
+            # full_resume = iterator[i]
+            # summaries.append((full_resume,i.result()))
+            summaries.append(i.result())
+
+    return summaries
 
 def assess_single_resume(text_resume, question_completion):
     """
@@ -97,25 +103,6 @@ def assess_single_resume(text_resume, question_completion):
     )
     return response['choices'][0]['message']['content']
 
-
-
-def get_resume_summaries(textresumes):
-    """
-    Multi-threaded calls to davinci model to parallelize summarization of resumes
-
-    textresumes: list [] - containing text-resumes converted from pdfs per element
-    """
-    summaries = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        iterator = {executor.submit(summarize_resume, textresume): textresume for textresume in textresumes}
-        for i in concurrent.futures.as_completed(iterator):
-            # original = iterator[i]
-            # summaries.append((original,i.result()))
-            summaries.append(i.result())
-
-    return summaries
-    
-
 def generate_resume_messages(textresumes, question_completion):
     base_sys_msg = "You are a helpful assistant."
     messages=[{"role": "system", "content": base_sys_msg}]
@@ -126,11 +113,6 @@ def generate_resume_messages(textresumes, question_completion):
     messages.append({"role": "user", "content": "Given these candidates, which of these candidates is a good fit for " + question_completion})
 
     return messages
-
-    
-
-
-
     
 def assess_multiple_resumes(text_resumes ,question_completion):
     model_engine_assessment = "gpt-3.5-turbo"
@@ -141,28 +123,14 @@ def assess_multiple_resumes(text_resumes ,question_completion):
 
     return response['choices'][0]['message']['content']
 
+if __name__ == "__main__":
+    resumes = sys.argv[1:len(sys.argv)-1]
+    question = sys.argv[len(sys.argv) - 1]
 
-resumes = sys.argv[1:len(sys.argv)-1]
-question = sys.argv[len(sys.argv) - 1]
-
-x = parse_all_resumes(resumes)
-print(assess_multiple_resumes(x, question))
-# print(get_resume_summaries(x))
-    
-
-
-# prompt = make_prompt(resumes, question)
-# completion = openai.Completion.create(
-#     engine=model_engine,
-#     prompt=prompt,
-#     max_tokens=max_tokens,
-#     temperature=0.5,
-#     top_p=1,
-#     frequency_penalty=0,
-#     presence_penalty=0
-# )
-
-# print(completion.choices[0].text)
-        
+    text_resumes = parse_all_resumes(resumes)
+    if len(text_resumes > 1):
+        print(assess_multiple_resumes(text_resumes, question))
+    else:
+        print(assess_single_resume(text_resumes[0], question))
 
 
