@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_chat import message
 from Top_Applicant_SpeedPass import TASP
-
+st.set_page_config(page_title="Top Applicant SpeedPass")
 header = st.container()
 upload = st.container()
 textInput = st.container()
@@ -54,8 +54,15 @@ if 'past' not in st.session_state:
 if question:
     output = bot.assess_multiple_resumes(resumes, question)
     # store the output 
-    st.session_state.past.append(question)
-    st.session_state.generated.append(output)
+    if 'generated' not in st.session_state:
+        st.session_state['generated'] = []
+
+    if 'past' not in st.session_state:
+        st.session_state['past'] = []
+    
+    st.session_state['past'].append(question)
+    st.session_state['generated'].append(output)
+    question = None
 
 for i in range(len(st.session_state['generated'])-1, -1 ,-1):
     message(st.session_state["generated"][i], key=str(i))
