@@ -199,6 +199,7 @@ if __name__ == "__main__":
     while t.refesh == False:
         question = input("\nWhat criteria would you like to assess on? OR type exit\n--")
         if question == "exit":
+            t.refesh = True
             break
         if len(text_resumes) > 1:
             print(t.assess_multiple_resumes(text_resumes, question))
