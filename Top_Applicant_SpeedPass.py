@@ -5,7 +5,10 @@ from pathlib import Path
 import pytesseract
 from pdf2image import convert_from_path
 from PIL import Image
+
 import sys
+import concurrent.futures
+import threading
 
 import openai
 
@@ -42,16 +45,18 @@ def get_resume_text(resume_file):
         resume_text += text
     return resume_text
 
-resumes = sys.argv[1:len(sys.argv)-1]
-question = sys.argv[len(sys.argv) - 1]
+# resumes = sys.argv[1:len(sys.argv)-1]
+# question = sys.argv[len(sys.argv) - 1]
 def parse_all_resumes(resumes):
-    res_text_compiled = ""
-    for resume in resumes:
+    res_text_compiled = []
+    for i in range(len(resumes)):
+        resume = resumes[i]
         curr = get_resume_text(resume)
         if len(curr) == 0:
-            break
-        curr = "----Begin Candidate:" + curr + "End Candidate----\n    "
-        res_text_compiled += curr
+            continue #break
+        # curr = "----Begin Candidate " + str(i+1) + ":" + curr + "End Candidate"+ str(i+1) +  "----\n    "
+        # res_text_compiled += curr
+        res_text_compiled.append(curr)
     return res_text_compiled
 
 def make_prompt(resumes, question):
@@ -94,21 +99,46 @@ def assess_single_resume(text_resume, question_completion):
 
 
 
+def get_resume_summaries(textresumes):
+    summaries = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        iterator = {executor.submit(summarize_resume, textresume): textresume for textresume in textresumes}
+        for i in concurrent.futures.as_completed(iterator):
+            original = iterator[i]
+            summaries.append((original,i.result()))
+    return summaries
+    
+
+def generate_resume_messages(textresumes):
+    base_sys_msg = "You are a helpful assistant."
+    messages=[{"role": "system", "content": base_sys_msg}]
+    for i in range(len(textresumes)):
+        res = textresumes[i]
 
 
 
-prompt = make_prompt(resumes, question)
-completion = openai.Completion.create(
-    engine=model_engine,
-    prompt=prompt,
-    max_tokens=max_tokens,
-    temperature=0.5,
-    top_p=1,
-    frequency_penalty=0,
-    presence_penalty=0
-)
+    
+def assess_multiple_resumes(text_resumes ,question_completion):
+    pass
 
-print(completion.choices[0].text)
+
+x = parse_all_resumes(["Resume.pdf", "Resume_Revised.pdf"])
+print(get_resume_summaries(x))
+    
+
+
+# prompt = make_prompt(resumes, question)
+# completion = openai.Completion.create(
+#     engine=model_engine,
+#     prompt=prompt,
+#     max_tokens=max_tokens,
+#     temperature=0.5,
+#     top_p=1,
+#     frequency_penalty=0,
+#     presence_penalty=0
+# )
+
+# print(completion.choices[0].text)
         
 
 
