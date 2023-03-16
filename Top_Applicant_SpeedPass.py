@@ -12,7 +12,7 @@ import openai
 class TASP:
     def __init__(self) -> None:
         self.MESSAGE_HISTORY = []
-        self.REFRESH = []
+        self.REFRESH = False
 
         with open('OPEN_AI_KEY.txt') as f:
             lines = f.readlines()
@@ -195,6 +195,16 @@ if __name__ == "__main__":
         print(t.assess_multiple_resumes(text_resumes, question))
     else:
         print(t.assess_single_resume(text_resumes[0], question))
+    
+    while t.refesh == False:
+        question = input("\nWhat criteria would you like to assess on? OR type exit\n--")
+        if question == "exit":
+            break
+        if len(text_resumes) > 1:
+            print(t.assess_multiple_resumes(text_resumes, question))
+        else:
+            print(t.assess_single_resume(text_resumes[0], question))
+
     
 
     
