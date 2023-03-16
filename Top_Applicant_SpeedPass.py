@@ -100,30 +100,54 @@ def assess_single_resume(text_resume, question_completion):
 
 
 def get_resume_summaries(textresumes):
+    """
+    Multi-threaded calls to davinci model to parallelize summarization of resumes
+
+    textresumes: list [] - containing text-resumes converted from pdfs per element
+    """
     summaries = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         iterator = {executor.submit(summarize_resume, textresume): textresume for textresume in textresumes}
         for i in concurrent.futures.as_completed(iterator):
-            original = iterator[i]
-            summaries.append((original,i.result()))
+            # original = iterator[i]
+            # summaries.append((original,i.result()))
+            summaries.append(i.result())
+
     return summaries
     
 
-def generate_resume_messages(textresumes):
+def generate_resume_messages(textresumes, question_completion):
     base_sys_msg = "You are a helpful assistant."
     messages=[{"role": "system", "content": base_sys_msg}]
-    for i in range(len(textresumes)):
-        res = textresumes[i]
+    summaries = get_resume_summaries(textresumes)
+    for i in range(len(summaries)):
+        messages.append({"role": "user", "content": "Consider the following text-resume from Candidate: " + str(i+1) +" " + summaries[i]}) #Format prompt, provide candidate id, and summary to bot
+    
+    messages.append({"role": "user", "content": "Given these candidates, which of these candidates is a good fit for " + question_completion})
+
+    return messages
+
+    
 
 
 
     
 def assess_multiple_resumes(text_resumes ,question_completion):
-    pass
+    model_engine_assessment = "gpt-3.5-turbo"
+    response = openai.ChatCompletion.create(
+    model = model_engine_assessment,
+    messages=generate_resume_messages(text_resumes, question_completion)
+    )
+
+    return response['choices'][0]['message']['content']
 
 
-x = parse_all_resumes(["Resume.pdf", "Resume_Revised.pdf"])
-print(get_resume_summaries(x))
+resumes = sys.argv[1:len(sys.argv)-1]
+question = sys.argv[len(sys.argv) - 1]
+
+x = parse_all_resumes(resumes)
+print(assess_multiple_resumes(x, question))
+# print(get_resume_summaries(x))
     
 
 
