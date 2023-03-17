@@ -11,12 +11,11 @@ import concurrent.futures
 import openai
 class TASP:
     def __init__(self) -> None:
-        self.MESSAGE_HISTORY = []
+        self.message_history = []
         self.REFRESH = False
 
         with open('OPEN_AI_KEY.txt') as f:
             lines = f.readlines()
-
         openai.api_key = lines[0]
     
     def get_resume_text(self,resume_file):
@@ -123,7 +122,7 @@ class TASP:
 
         returns str containing GPT3.5-Turbo's assessment based on the given criteria
         """
-        model_engine_assessment = "gpt-3.5-turbo"
+        model_engine_assessment = "gpt3.5-turbo"
         summary = self.summarize_resume(text_resume)
 
         response = openai.ChatCompletion.create(
@@ -148,6 +147,7 @@ class TASP:
         base_sys_msg = "You are a helpful assistant."
         messages=[{"role": "system", "content": base_sys_msg}]
         summaries = self.get_resume_summaries(textresumes)
+        print("Summaries Done!") ##Change to Logging
         for i in range(len(summaries)):
             messages.append({"role": "user", "content": "Consider the following text-resume from Candidate: " + str(i+1) +" " + summaries[i]}) #Format prompt, provide candidate id, and summary to bot
         
@@ -166,14 +166,14 @@ class TASP:
 
         returns str containing GPT3.5-Turbo's assessment based on the given criteria
         """
-        if self.MESSAGE_HISTORY == [] or self.refesh:
-            self.MESSAGE_HISTORY = self.generate_resume_messages(text_resumes, question_completion)
+        if self.message_history == [] or self.refesh:
+            self.message_history = self.generate_resume_messages(text_resumes, question_completion)
             self.refesh=False
 
-        temp = self.MESSAGE_HISTORY
+        temp = self.message_history
         temp.append({"role": "user", "content": "Given these candidates, which of these candidates fits the following criteria " + question_completion})
 
-        model_engine_assessment = "gpt-3.5-turbo"
+        model_engine_assessment = "gpt3.5-turbo"
         response = openai.ChatCompletion.create(
         model = model_engine_assessment,
         messages=temp
